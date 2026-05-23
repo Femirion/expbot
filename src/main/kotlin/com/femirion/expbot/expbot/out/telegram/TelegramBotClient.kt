@@ -16,12 +16,17 @@ class TelegramBotClient(
         sendMessage(chatId, text, replyMarkup = null)
     }
 
-    fun sendMessageWithCategoryButtons(chatId: Long, text: String, categories: List<TelegramButtonCategory>) {
+    fun sendMessageWithCategoryButtons(
+        chatId: Long,
+        text: String,
+        callbackPrefix: String,
+        categories: List<TelegramButtonCategory>,
+    ) {
         val buttons = categories.map { category ->
             listOf(
                 mapOf(
                     "text" to category.name,
-                    "callback_data" to "expense:${category.code}",
+                    "callback_data" to "$callbackPrefix:${category.code}",
                 )
             )
         }

@@ -24,14 +24,14 @@ class MessageHandler(
     private val transactionService: MoneyTransactionService,
     private val telegramBotClient: TelegramBotClient,
 ) {
-    private val pendingExpenses = ConcurrentHashMap<PendingExpenseKey, String>()
+    private val pendingTransactions = ConcurrentHashMap<PendingTransactionKey, PendingTransaction>()
 
     fun handle(update: Message) {
-        val pendingCategoryCode = pendingExpenses[PendingExpenseKey(update.chatId, update.userId)]
-        if (pendingCategoryCode != null && !update.text.orEmpty().trim().startsWith("/")) {
-            val response = runCatching { createPendingExpense(update, pendingCategoryCode) }
+        val pendingTransaction = pendingTransactions[PendingTransactionKey(update.chatId, update.userId)]
+        if (pendingTransaction != null && !update.text.orEmpty().trim().startsWith("/")) {
+            val response = runCatching { createPendingTransaction(update, pendingTransaction) }
                 .getOrElse { error ->
-                    log.warning { "Failed to handle pending expense message ${update.messageId}: ${error.message}" }
+                    log.warning { "Failed to handle pending transaction message ${update.messageId}: ${error.message}" }
                     "Could not save it: ${error.message ?: "unknown error"}"
                 }
             telegramBotClient.sendMessage(update.chatId, response)
@@ -44,7 +44,11 @@ class MessageHandler(
             return
         }
         if (command == BotCommand.StartExpense) {
-            startExpense(update)
+            startCategorySelection(update, CategoryType.EXPENSE)
+            return
+        }
+        if (command == BotCommand.StartIncome) {
+            startCategorySelection(update, CategoryType.INCOME)
             return
         }
 
@@ -64,24 +68,25 @@ class MessageHandler(
             return
         }
 
+        val categoryType = data?.callbackCategoryType()
         val categoryCode = data
-            ?.takeIf { it.startsWith(EXPENSE_CALLBACK_PREFIX) }
-            ?.removePrefix(EXPENSE_CALLBACK_PREFIX)
+            ?.substringAfter(":", missingDelimiterValue = "")
             ?.trim()
             ?.uppercase()
+            ?.takeIf { it.isNotBlank() }
 
-        if (categoryCode == null) {
+        if (categoryType == null || categoryCode == null) {
             telegramBotClient.sendMessage(chatId, helpText())
             return
         }
 
         val category = categoryService.getCategoryByCode(categoryCode)
-        if (category == null || !category.isActive || category.type != CategoryType.EXPENSE) {
-            telegramBotClient.sendMessage(chatId, "Expense category $categoryCode is not available")
+        if (category == null || !category.isActive || category.type != categoryType) {
+            telegramBotClient.sendMessage(chatId, "${categoryType.label()} category $categoryCode is not available")
             return
         }
 
-        pendingExpenses[PendingExpenseKey(chatId, userId)] = category.code
+        pendingTransactions[PendingTransactionKey(chatId, userId)] = PendingTransaction(category.code, categoryType)
         telegramBotClient.sendMessage(chatId, "Send amount and description, for example: 12.50 groceries")
     }
 
@@ -92,8 +97,13 @@ class MessageHandler(
             BotCommand.TodayExpenses -> todayExpensesText(message.chatId)
             BotCommand.MonthExpenses -> monthExpensesText(message.chatId)
             BotCommand.Balance -> balanceText(message.chatId)
+            is BotCommand.CorrectBalance -> correctBalance(message, command)
             BotCommand.StartExpense -> {
-                startExpense(message)
+                startCategorySelection(message, CategoryType.EXPENSE)
+                ""
+            }
+            BotCommand.StartIncome -> {
+                startCategorySelection(message, CategoryType.INCOME)
                 ""
             }
             is BotCommand.CreateCategory -> createCategory(command)
@@ -101,23 +111,24 @@ class MessageHandler(
         }
     }
 
-    private fun startExpense(message: Message) {
+    private fun startCategorySelection(message: Message, type: CategoryType) {
         val categories = categoryService.getAll()
-            .filter { it.isActive && it.type == CategoryType.EXPENSE }
+            .filter { it.isActive && it.type == type }
             .sortedBy { it.code }
         if (categories.isEmpty()) {
-            telegramBotClient.sendMessage(message.chatId, "No expense categories yet. Add one with /category expense food Food")
+            telegramBotClient.sendMessage(message.chatId, "No ${type.name.lowercase()} categories yet. Add one with /category ${type.name.lowercase()} code Name")
             return
         }
 
         telegramBotClient.sendMessageWithCategoryButtons(
             chatId = message.chatId,
-            text = "Choose expense category",
+            text = "Choose ${type.name.lowercase()} category",
+            callbackPrefix = type.callbackPrefix(),
             categories = categories.map { TelegramButtonCategory(code = it.code, name = it.name) },
         )
     }
 
-    private fun createPendingExpense(message: Message, categoryCode: String): String {
+    private fun createPendingTransaction(message: Message, pendingTransaction: PendingTransaction): String {
         val parts = message.text.orEmpty().trim().split(Regex("\\s+"), limit = 2)
         val amount = parts.firstOrNull()
             ?.replace(',', '.')
@@ -128,13 +139,13 @@ class MessageHandler(
         }
 
         val command = BotCommand.CreateTransaction(
-            categoryCode = categoryCode,
+            categoryCode = pendingTransaction.categoryCode,
             amount = amount,
             note = parts.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() },
-            expectedType = CategoryType.EXPENSE,
+            expectedType = pendingTransaction.type,
         )
         val response = createTransaction(message, command)
-        pendingExpenses.remove(PendingExpenseKey(message.chatId, message.userId))
+        pendingTransactions.remove(PendingTransactionKey(message.chatId, message.userId))
         return response
     }
 
@@ -219,6 +230,17 @@ class MessageHandler(
         return "Balance: ${transactionService.balance(chatId).toPlainString()}"
     }
 
+    private fun correctBalance(message: Message, command: BotCommand.CorrectBalance): String {
+        val balance = transactionService.correctBalance(
+            telegramMessageId = message.messageId,
+            telegramUserId = message.userId,
+            chatId = message.chatId,
+            targetBalance = command.targetBalance,
+            occurredAt = OffsetDateTime.ofInstant(Instant.ofEpochSecond(message.date), ZoneOffset.UTC),
+        )
+        return "Balance corrected: ${balance.toPlainString()}"
+    }
+
     private fun helpText(): String {
         return """
             Commands:
@@ -226,9 +248,11 @@ class MessageHandler(
             /today
             /month
             /b
+            /corr 800
             /category expense food Food
             /category income salary Salary
             /e
+            /i
             /expense food 12.50 groceries
             /income salary 1000 May salary
         """.trimIndent()
@@ -236,11 +260,31 @@ class MessageHandler(
 
     companion object {
         val log: Logger = Logger.getLogger(MessageHandler::class.java.name)
-        private const val EXPENSE_CALLBACK_PREFIX = "expense:"
     }
 }
 
-private data class PendingExpenseKey(
+private data class PendingTransactionKey(
     val chatId: Long,
     val userId: Long,
 )
+
+private data class PendingTransaction(
+    val categoryCode: String,
+    val type: CategoryType,
+)
+
+private fun CategoryType.callbackPrefix(): String {
+    return name.lowercase()
+}
+
+private fun CategoryType.label(): String {
+    return name.lowercase().replaceFirstChar { it.uppercase() }
+}
+
+private fun String.callbackCategoryType(): CategoryType? {
+    return when {
+        startsWith("${CategoryType.EXPENSE.callbackPrefix()}:") -> CategoryType.EXPENSE
+        startsWith("${CategoryType.INCOME.callbackPrefix()}:") -> CategoryType.INCOME
+        else -> null
+    }
+}

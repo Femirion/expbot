@@ -20,11 +20,14 @@ class BotCommandParser {
             "/today", "/t" -> BotCommand.TodayExpenses
             "/month", "/m" -> BotCommand.MonthExpenses
             "/balance", "/b" -> BotCommand.Balance
+            "/corr" -> parseBalanceCorrection(parts)
             "/category", "/cat", "/c" -> parseCategory(parts)
             "/expense", "/exp", "/e" -> {
                 if (parts.size == 1) BotCommand.StartExpense else parseTransaction(parts, CategoryType.EXPENSE)
             }
-            "/income", "/inc", "/i" -> parseTransaction(parts, CategoryType.INCOME)
+            "/income", "/inc", "/i" -> {
+                if (parts.size == 1) BotCommand.StartIncome else parseTransaction(parts, CategoryType.INCOME)
+            }
             else -> null
         }
     }
@@ -43,6 +46,14 @@ class BotCommandParser {
             code = parts[2].trim().uppercase(),
             name = parts[3].trim(),
         )
+    }
+
+    private fun parseBalanceCorrection(parts: List<String>): BotCommand.CorrectBalance? {
+        if (parts.size < 2) {
+            return null
+        }
+        val targetBalance = parts[1].replace(',', '.').toBigDecimalOrNull() ?: return null
+        return BotCommand.CorrectBalance(targetBalance)
     }
 
     private fun parseTransaction(parts: List<String>, type: CategoryType): BotCommand.CreateTransaction? {

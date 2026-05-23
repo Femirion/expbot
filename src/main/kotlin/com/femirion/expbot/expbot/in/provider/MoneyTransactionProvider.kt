@@ -5,6 +5,8 @@ import com.femirion.expbot.expbot.domain.entity.CategoryExpenseSummary
 import com.femirion.expbot.expbot.domain.entity.CategoryType
 import com.femirion.expbot.expbot.domain.entity.MoneyTransaction
 import com.femirion.expbot.expbot.`in`.mapper.MoneyTransactionMapper
+import com.femirion.expbot.expbot.`in`.repository.BalanceCorrectionEntity
+import com.femirion.expbot.expbot.`in`.repository.BalanceCorrectionRepository
 import com.femirion.expbot.expbot.`in`.repository.CategoryRepository
 import com.femirion.expbot.expbot.`in`.repository.MoneyTransactionEntity
 import com.femirion.expbot.expbot.`in`.repository.MoneyTransactionRepository
@@ -14,6 +16,7 @@ import java.time.OffsetDateTime
 
 @Service
 class MoneyTransactionProvider(
+    private val balanceCorrectionRepository: BalanceCorrectionRepository,
     private val categoryRepository: CategoryRepository,
     private val transactionMapper: MoneyTransactionMapper,
     private val transactionRepository: MoneyTransactionRepository,
@@ -55,6 +58,32 @@ class MoneyTransactionProvider(
     }
 
     fun balance(chatId: Long): BigDecimal {
-        return transactionRepository.balance(chatId)
+        return transactionRepository.balance(chatId) + balanceCorrectionRepository.balance(chatId)
+    }
+
+    fun correctionExists(telegramMessageId: Long, chatId: Long): Boolean {
+        return balanceCorrectionRepository.existsByTelegramMessageIdAndChatId(telegramMessageId, chatId)
+    }
+
+    fun saveBalanceCorrection(
+        telegramMessageId: Long,
+        telegramUserId: Long,
+        chatId: Long,
+        amount: BigDecimal,
+        targetBalance: BigDecimal,
+        previousBalance: BigDecimal,
+        occurredAt: OffsetDateTime,
+    ) {
+        balanceCorrectionRepository.save(
+            BalanceCorrectionEntity(
+                telegramMessageId = telegramMessageId,
+                telegramUserId = telegramUserId,
+                chatId = chatId,
+                amount = amount,
+                targetBalance = targetBalance,
+                previousBalance = previousBalance,
+                occurredAt = occurredAt,
+            )
+        )
     }
 }

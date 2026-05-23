@@ -20,13 +20,15 @@ curl -X POST http://localhost:8080/v1/categories \
 
 ```
 /categories
+/b
+/corr 800
 /category expense food Food
 /category income salary Salary
 /expense food 12.50 groceries
 /income salary 1000 May salary
 ```
 
-Expenses and incomes are saved to PostgreSQL first. If Google Sheets reporting is enabled, the saved transaction is appended to the configured sheet.
+Expenses and incomes are saved to PostgreSQL first. If Google Sheets reporting is enabled, saved expenses are appended to the configured sheet.
 
 ## Environment variables
 

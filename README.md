@@ -1,13 +1,13 @@
 # Expbot
 
-Telegram bot for tracking family expenses and income. The service stores transactions in PostgreSQL and can append every saved transaction to a Google Spreadsheet.
+Telegram bot for tracking family expenses and income. The service stores transactions in PostgreSQL and can append saved expenses to a Google Spreadsheet.
 
 ## Features
 
 - Add expense and income categories.
 - Save expenses and incomes from Telegram commands.
 - Persist data in PostgreSQL with Flyway migrations.
-- Optionally report saved transactions to Google Sheets.
+- Optionally report saved expenses to Google Sheets.
 - Deployable to Railway.
 
 ## Requirements
@@ -21,6 +21,8 @@ Telegram bot for tracking family expenses and income. The service stores transac
 
 ```text
 /categories
+/b
+/corr 800
 /category expense food Food
 /category income salary Salary
 /expense food 12.50 groceries

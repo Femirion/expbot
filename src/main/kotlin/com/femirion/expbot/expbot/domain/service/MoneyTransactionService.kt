@@ -34,9 +34,35 @@ class MoneyTransactionService(
     fun balance(chatId: Long): BigDecimal {
         return transactionProvider.balance(chatId)
     }
+
+    @Transactional
+    fun correctBalance(
+        telegramMessageId: Long,
+        telegramUserId: Long,
+        chatId: Long,
+        targetBalance: BigDecimal,
+        occurredAt: OffsetDateTime,
+    ): BigDecimal {
+        if (transactionProvider.correctionExists(telegramMessageId, chatId)) {
+            throw DuplicateBalanceCorrectionException()
+        }
+        val currentBalance = transactionProvider.balance(chatId)
+        val correctionAmount = targetBalance - currentBalance
+        transactionProvider.saveBalanceCorrection(
+            telegramMessageId = telegramMessageId,
+            telegramUserId = telegramUserId,
+            chatId = chatId,
+            amount = correctionAmount,
+            targetBalance = targetBalance,
+            previousBalance = currentBalance,
+            occurredAt = occurredAt,
+        )
+        return targetBalance
+    }
 }
 
 class DuplicateTransactionException : RuntimeException("Telegram message was already processed as transaction")
+class DuplicateBalanceCorrectionException : RuntimeException("Telegram message was already processed as balance correction")
 
 interface MoneyTransactionReporter {
     fun report(transaction: MoneyTransaction)

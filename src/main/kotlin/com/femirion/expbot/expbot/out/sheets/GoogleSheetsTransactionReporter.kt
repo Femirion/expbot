@@ -3,6 +3,7 @@ package com.femirion.expbot.expbot.out.sheets
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.femirion.expbot.expbot.domain.entity.CategoryType
 import com.femirion.expbot.expbot.domain.entity.MoneyTransaction
 import com.femirion.expbot.expbot.domain.service.MoneyTransactionReporter
 import org.springframework.beans.factory.annotation.Value
@@ -34,6 +35,9 @@ class GoogleSheetsTransactionReporter(
 
     override fun report(transaction: MoneyTransaction) {
         if (!enabled) {
+            return
+        }
+        if (!transaction.shouldReportToSheet()) {
             return
         }
         if (spreadsheetId.isBlank() || serviceAccountJson.isBlank()) {
@@ -113,6 +117,10 @@ class GoogleSheetsTransactionReporter(
         private const val GOOGLE_TOKEN_URI = "https://oauth2.googleapis.com/token"
         private val log: Logger = Logger.getLogger(GoogleSheetsTransactionReporter::class.java.name)
     }
+}
+
+internal fun MoneyTransaction.shouldReportToSheet(): Boolean {
+    return type == CategoryType.EXPENSE
 }
 
 internal fun MoneyTransaction.toSheetRow(): List<String> {

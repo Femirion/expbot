@@ -25,6 +25,11 @@ class BotCommandParserTest {
     }
 
     @Test
+    fun `parses bare income command as category selection start`() {
+        assertEquals(BotCommand.StartIncome, parser.parse("/i"))
+    }
+
+    @Test
     fun `parses expense summary commands`() {
         assertEquals(BotCommand.TodayExpenses, parser.parse("/today"))
         assertEquals(BotCommand.TodayExpenses, parser.parse("/t"))
@@ -32,6 +37,13 @@ class BotCommandParserTest {
         assertEquals(BotCommand.MonthExpenses, parser.parse("/m"))
         assertEquals(BotCommand.Balance, parser.parse("/balance"))
         assertEquals(BotCommand.Balance, parser.parse("/b"))
+    }
+
+    @Test
+    fun `parses balance correction command`() {
+        val command = parser.parse("/corr 800,50") as BotCommand.CorrectBalance
+
+        assertEquals(0, BigDecimal("800.50").compareTo(command.targetBalance))
     }
 
     @Test
@@ -58,5 +70,6 @@ class BotCommandParserTest {
         assertNull(parser.parse("/expense food nope"))
         assertNull(parser.parse("/e food nope"))
         assertNull(parser.parse("/expense food -1"))
+        assertNull(parser.parse("/corr nope"))
     }
 }
