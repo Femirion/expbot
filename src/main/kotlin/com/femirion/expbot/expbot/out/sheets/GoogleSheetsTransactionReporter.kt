@@ -15,6 +15,7 @@ import java.security.KeyFactory
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Instant
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Base64
 import java.util.logging.Logger
@@ -124,15 +125,17 @@ internal fun MoneyTransaction.shouldReportToSheet(): Boolean {
 }
 
 internal fun MoneyTransaction.toSheetRow(): List<String> {
+    val belgradeOccurredAt = occurredAt.atZoneSameInstant(SHEET_TIME_ZONE)
     return listOf(
-        occurredAt.format(SHEET_DATE_FORMATTER),
-        occurredAt.format(SHEET_TIME_FORMATTER),
+        belgradeOccurredAt.format(SHEET_DATE_FORMATTER),
+        belgradeOccurredAt.format(SHEET_TIME_FORMATTER),
         category.name,
         amount.toPlainString(),
         note.orEmpty(),
     )
 }
 
+private val SHEET_TIME_ZONE: ZoneId = ZoneId.of("Europe/Belgrade")
 private val SHEET_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
 private val SHEET_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 

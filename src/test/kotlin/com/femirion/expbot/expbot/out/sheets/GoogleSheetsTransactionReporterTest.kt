@@ -21,7 +21,7 @@ class GoogleSheetsTransactionReporterTest {
         )
 
         assertEquals(
-            listOf("2026-05-23", "14:07", "Food and groceries", "12.50", "milk and bread"),
+            listOf("2026-05-23", "16:07", "Food and groceries", "12.50", "milk and bread"),
             transaction.toSheetRow(),
         )
     }
