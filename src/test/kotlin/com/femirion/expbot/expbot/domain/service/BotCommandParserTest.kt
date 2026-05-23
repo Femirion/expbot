@@ -27,12 +27,14 @@ class BotCommandParserTest {
     @Test
     fun `parses expense summary commands`() {
         assertEquals(BotCommand.TodayExpenses, parser.parse("/today"))
+        assertEquals(BotCommand.TodayExpenses, parser.parse("/t"))
         assertEquals(BotCommand.MonthExpenses, parser.parse("/month"))
+        assertEquals(BotCommand.MonthExpenses, parser.parse("/m"))
     }
 
     @Test
     fun `parses income command with comma decimal separator`() {
-        val command = parser.parse("/income salary 1000,25 May salary") as BotCommand.CreateTransaction
+        val command = parser.parse("/i salary 1000,25 May salary") as BotCommand.CreateTransaction
 
         assertEquals("SALARY", command.categoryCode)
         assertEquals(0, BigDecimal("1000.25").compareTo(command.amount))
@@ -42,7 +44,7 @@ class BotCommandParserTest {
 
     @Test
     fun `parses category command`() {
-        val command = parser.parse("/category income bonus Bonus money") as BotCommand.CreateCategory
+        val command = parser.parse("/c income bonus Bonus money") as BotCommand.CreateCategory
 
         assertEquals(CategoryType.INCOME, command.type)
         assertEquals("BONUS", command.code)
