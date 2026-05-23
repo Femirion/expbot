@@ -17,6 +17,8 @@ class BotCommandParser {
         return when (parts[0].lowercase().substringBefore("@")) {
             "/start", "/help" -> BotCommand.Help
             "/categories", "/cats" -> BotCommand.ListCategories
+            "/today" -> BotCommand.TodayExpenses
+            "/month" -> BotCommand.MonthExpenses
             "/category", "/cat" -> parseCategory(parts)
             "/expense", "/exp", "/e" -> {
                 if (parts.size == 1) BotCommand.StartExpense else parseTransaction(parts, CategoryType.EXPENSE)

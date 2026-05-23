@@ -25,6 +25,12 @@ class BotCommandParserTest {
     }
 
     @Test
+    fun `parses expense summary commands`() {
+        assertEquals(BotCommand.TodayExpenses, parser.parse("/today"))
+        assertEquals(BotCommand.MonthExpenses, parser.parse("/month"))
+    }
+
+    @Test
     fun `parses income command with comma decimal separator`() {
         val command = parser.parse("/income salary 1000,25 May salary") as BotCommand.CreateTransaction
 

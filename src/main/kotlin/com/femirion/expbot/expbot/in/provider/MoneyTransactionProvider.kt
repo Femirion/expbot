@@ -1,12 +1,15 @@
 package com.femirion.expbot.expbot.`in`.provider
 
 import com.femirion.expbot.expbot.domain.entity.Category
+import com.femirion.expbot.expbot.domain.entity.CategoryExpenseSummary
+import com.femirion.expbot.expbot.domain.entity.CategoryType
 import com.femirion.expbot.expbot.domain.entity.MoneyTransaction
 import com.femirion.expbot.expbot.`in`.mapper.MoneyTransactionMapper
 import com.femirion.expbot.expbot.`in`.repository.CategoryRepository
 import com.femirion.expbot.expbot.`in`.repository.MoneyTransactionEntity
 import com.femirion.expbot.expbot.`in`.repository.MoneyTransactionRepository
 import org.springframework.stereotype.Service
+import java.time.OffsetDateTime
 
 @Service
 class MoneyTransactionProvider(
@@ -37,5 +40,16 @@ class MoneyTransactionProvider(
             )
         )
         return transactionMapper.toTransaction(savedEntity)
+    }
+
+    fun sumExpensesByCategory(chatId: Long, from: OffsetDateTime, to: OffsetDateTime): List<CategoryExpenseSummary> {
+        return transactionRepository.sumByCategory(chatId, CategoryType.EXPENSE, from, to)
+            .map {
+                CategoryExpenseSummary(
+                    categoryCode = it.categoryCode,
+                    categoryName = it.categoryName,
+                    total = it.total,
+                )
+            }
     }
 }

@@ -1,10 +1,12 @@
 package com.femirion.expbot.expbot.domain.service
 
 import com.femirion.expbot.expbot.domain.entity.Category
+import com.femirion.expbot.expbot.domain.entity.CategoryExpenseSummary
 import com.femirion.expbot.expbot.domain.entity.MoneyTransaction
 import com.femirion.expbot.expbot.`in`.provider.MoneyTransactionProvider
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.OffsetDateTime
 
 @Service
 class MoneyTransactionService(
@@ -20,6 +22,11 @@ class MoneyTransactionService(
         val saved = transactionProvider.save(transaction)
         transactionReporter.report(saved)
         return saved
+    }
+
+    @Transactional(readOnly = true)
+    fun sumExpensesByCategory(chatId: Long, from: OffsetDateTime, to: OffsetDateTime): List<CategoryExpenseSummary> {
+        return transactionProvider.sumExpensesByCategory(chatId, from, to)
     }
 }
 

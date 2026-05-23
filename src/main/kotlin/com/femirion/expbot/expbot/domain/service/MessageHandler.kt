@@ -9,8 +9,10 @@ import com.femirion.expbot.expbot.out.telegram.TelegramButtonCategory
 import com.femirion.expbot.expbot.service.CategoryService
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.YearMonth
 import java.time.ZoneOffset
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Logger
@@ -87,6 +89,8 @@ class MessageHandler(
         return when (command) {
             BotCommand.Help -> helpText()
             BotCommand.ListCategories -> categoriesText()
+            BotCommand.TodayExpenses -> todayExpensesText(message.chatId)
+            BotCommand.MonthExpenses -> monthExpensesText(message.chatId)
             BotCommand.StartExpense -> {
                 startExpense(message)
                 ""
@@ -180,10 +184,42 @@ class MessageHandler(
         return categories.joinToString(separator = "\n") { "${it.code} - ${it.name} (${it.type.name.lowercase()})" }
     }
 
+    private fun todayExpensesText(chatId: Long): String {
+        val today = LocalDate.now(ZoneOffset.UTC)
+        val from = today.atStartOfDay().atOffset(ZoneOffset.UTC)
+        val to = today.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC)
+        return expensesSummaryText("Today expenses", chatId, from, to)
+    }
+
+    private fun monthExpensesText(chatId: Long): String {
+        val month = YearMonth.now(ZoneOffset.UTC)
+        val from = month.atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC)
+        val to = month.plusMonths(1).atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC)
+        return expensesSummaryText("Month expenses", chatId, from, to)
+    }
+
+    private fun expensesSummaryText(
+        title: String,
+        chatId: Long,
+        from: OffsetDateTime,
+        to: OffsetDateTime,
+    ): String {
+        val summaries = transactionService.sumExpensesByCategory(chatId, from, to)
+        if (summaries.isEmpty()) {
+            return "$title:\nNo expenses"
+        }
+
+        val total = summaries.fold(BigDecimal.ZERO) { sum, summary -> sum + summary.total }
+        val lines = summaries.map { "${it.categoryCode} (${it.categoryName}): ${it.total.toPlainString()}" }
+        return (listOf("$title:") + lines + "Total: ${total.toPlainString()}").joinToString("\n")
+    }
+
     private fun helpText(): String {
         return """
             Commands:
             /categories
+            /today
+            /month
             /category expense food Food
             /category income salary Salary
             /e
