@@ -39,7 +39,7 @@ The app reads configuration from environment variables. Local defaults are provi
 | `TELEGRAM_BOT_TOKEN` | Yes for Telegram replies | Bot token from BotFather. |
 | `GOOGLE_SHEETS_ENABLED` | No | Set to `true` to append transactions to Google Sheets. Default is `false`. |
 | `GOOGLE_SHEETS_SPREADSHEET_ID` | If Sheets enabled | Spreadsheet id from the Google Sheets URL. |
-| `GOOGLE_SHEETS_RANGE` | No | Append range. Default is `Transactions!A:I`. |
+| `GOOGLE_SHEETS_RANGE` | No | Append range. Default is `Transactions!A:E`. |
 | `GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON` | If Sheets enabled | Full service account JSON as a single environment variable. |
 
 ## Build
@@ -121,7 +121,7 @@ curl "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo"
 Rows are appended with these columns:
 
 ```text
-occurred_at, type, category_code, category_name, amount, note, telegram_user_id, chat_id, telegram_message_id
+date, time, category_description, amount, description
 ```
 
 ## Deploy to Railway
@@ -144,7 +144,7 @@ GOOGLE_SHEETS_ENABLED=false
 ```text
 GOOGLE_SHEETS_ENABLED=true
 GOOGLE_SHEETS_SPREADSHEET_ID=<spreadsheet-id>
-GOOGLE_SHEETS_RANGE=Transactions!A:I
+GOOGLE_SHEETS_RANGE=Transactions!A:E
 GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON=<full-service-account-json>
 ```
 

@@ -14,6 +14,7 @@ import java.security.KeyFactory
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Instant
+import java.time.format.DateTimeFormatter
 import java.util.Base64
 import java.util.logging.Logger
 
@@ -23,7 +24,7 @@ class GoogleSheetsTransactionReporter(
     private val enabled: Boolean,
     @Value("\${expbot.google-sheets.spreadsheet-id:}")
     private val spreadsheetId: String,
-    @Value("\${expbot.google-sheets.range:Transactions!A:I}")
+    @Value("\${expbot.google-sheets.range:Transactions!A:E}")
     private val range: String,
     @Value("\${expbot.google-sheets.service-account-json:}")
     private val serviceAccountJson: String,
@@ -77,19 +78,7 @@ class GoogleSheetsTransactionReporter(
     }
 
     private fun appendRow(accessToken: String, transaction: MoneyTransaction) {
-        val values = listOf(
-            listOf(
-                transaction.occurredAt.toString(),
-                transaction.type.name,
-                transaction.category.code,
-                transaction.category.name,
-                transaction.amount.toPlainString(),
-                transaction.note.orEmpty(),
-                transaction.telegramUserId.toString(),
-                transaction.chatId.toString(),
-                transaction.telegramMessageId.toString(),
-            )
-        )
+        val values = listOf(transaction.toSheetRow())
 
         restClient.post()
             .uri(
@@ -125,6 +114,19 @@ class GoogleSheetsTransactionReporter(
         private val log: Logger = Logger.getLogger(GoogleSheetsTransactionReporter::class.java.name)
     }
 }
+
+internal fun MoneyTransaction.toSheetRow(): List<String> {
+    return listOf(
+        occurredAt.format(SHEET_DATE_FORMATTER),
+        occurredAt.format(SHEET_TIME_FORMATTER),
+        category.name,
+        amount.toPlainString(),
+        note.orEmpty(),
+    )
+}
+
+private val SHEET_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+private val SHEET_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class ServiceAccountCredentials(
