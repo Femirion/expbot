@@ -9,6 +9,7 @@ sealed interface BotCommand {
     data object StartExpense : BotCommand
     data object TodayExpenses : BotCommand
     data object MonthExpenses : BotCommand
+    data object Balance : BotCommand
 
     data class CreateCategory(
         val type: CategoryType,

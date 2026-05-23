@@ -16,10 +16,11 @@ class BotCommandParser {
         val parts = normalized.split(Regex("\\s+"), limit = 4)
         return when (parts[0].lowercase().substringBefore("@")) {
             "/start", "/help" -> BotCommand.Help
-            "/categories", "/cats", "/c" -> BotCommand.ListCategories
+            "/categories", "/cats" -> BotCommand.ListCategories
             "/today", "/t" -> BotCommand.TodayExpenses
             "/month", "/m" -> BotCommand.MonthExpenses
-            "/category", "/cat" -> parseCategory(parts)
+            "/balance", "/b" -> BotCommand.Balance
+            "/category", "/cat", "/c" -> parseCategory(parts)
             "/expense", "/exp", "/e" -> {
                 if (parts.size == 1) BotCommand.StartExpense else parseTransaction(parts, CategoryType.EXPENSE)
             }

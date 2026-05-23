@@ -9,6 +9,7 @@ import com.femirion.expbot.expbot.`in`.repository.CategoryRepository
 import com.femirion.expbot.expbot.`in`.repository.MoneyTransactionEntity
 import com.femirion.expbot.expbot.`in`.repository.MoneyTransactionRepository
 import org.springframework.stereotype.Service
+import java.math.BigDecimal
 import java.time.OffsetDateTime
 
 @Service
@@ -51,5 +52,9 @@ class MoneyTransactionProvider(
                     total = it.total,
                 )
             }
+    }
+
+    fun balance(chatId: Long): BigDecimal {
+        return transactionRepository.balance(chatId)
     }
 }

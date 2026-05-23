@@ -91,6 +91,7 @@ class MessageHandler(
             BotCommand.ListCategories -> categoriesText()
             BotCommand.TodayExpenses -> todayExpensesText(message.chatId)
             BotCommand.MonthExpenses -> monthExpensesText(message.chatId)
+            BotCommand.Balance -> balanceText(message.chatId)
             BotCommand.StartExpense -> {
                 startExpense(message)
                 ""
@@ -214,12 +215,17 @@ class MessageHandler(
         return (listOf("$title:") + lines + "Total: ${total.toPlainString()}").joinToString("\n")
     }
 
+    private fun balanceText(chatId: Long): String {
+        return "Balance: ${transactionService.balance(chatId).toPlainString()}"
+    }
+
     private fun helpText(): String {
         return """
             Commands:
             /categories
             /today
             /month
+            /b
             /category expense food Food
             /category income salary Salary
             /e

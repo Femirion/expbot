@@ -6,6 +6,7 @@ import com.femirion.expbot.expbot.domain.entity.MoneyTransaction
 import com.femirion.expbot.expbot.`in`.provider.MoneyTransactionProvider
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
 import java.time.OffsetDateTime
 
 @Service
@@ -27,6 +28,11 @@ class MoneyTransactionService(
     @Transactional(readOnly = true)
     fun sumExpensesByCategory(chatId: Long, from: OffsetDateTime, to: OffsetDateTime): List<CategoryExpenseSummary> {
         return transactionProvider.sumExpensesByCategory(chatId, from, to)
+    }
+
+    @Transactional(readOnly = true)
+    fun balance(chatId: Long): BigDecimal {
+        return transactionProvider.balance(chatId)
     }
 }
 

@@ -31,6 +31,21 @@ interface MoneyTransactionRepository : JpaRepository<MoneyTransactionEntity, Lon
         @Param("from") from: OffsetDateTime,
         @Param("to") to: OffsetDateTime,
     ): List<CategoryExpenseTotal>
+
+    @Query(
+        """
+        select coalesce(sum(
+            case
+                when t.type = com.femirion.expbot.expbot.domain.entity.CategoryType.INCOME then t.amount
+                when t.type = com.femirion.expbot.expbot.domain.entity.CategoryType.EXPENSE then -t.amount
+                else 0
+            end
+        ), 0)
+        from MoneyTransactionEntity t
+        where t.chatId = :chatId
+        """
+    )
+    fun balance(@Param("chatId") chatId: Long): BigDecimal
 }
 
 interface CategoryExpenseTotal {
