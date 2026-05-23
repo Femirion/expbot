@@ -1,5 +1,6 @@
 package com.femirion.expbot.expbot.out.sheets
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.femirion.expbot.expbot.domain.entity.MoneyTransaction
@@ -125,6 +126,7 @@ class GoogleSheetsTransactionReporter(
     }
 }
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class ServiceAccountCredentials(
     @JsonProperty("client_email")
     val clientEmail: String,
