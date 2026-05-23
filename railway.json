@@ -1,0 +1,10 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "RAILPACK",
+    "buildCommand": "./gradlew clean bootJar"
+  },
+  "deploy": {
+    "startCommand": "java -jar build/libs/*.jar"
+  }
+}
