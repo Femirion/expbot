@@ -20,6 +20,11 @@ class BotCommandParserTest {
     }
 
     @Test
+    fun `parses bare expense command as category selection start`() {
+        assertEquals(BotCommand.StartExpense, parser.parse("/e"))
+    }
+
+    @Test
     fun `parses income command with comma decimal separator`() {
         val command = parser.parse("/income salary 1000,25 May salary") as BotCommand.CreateTransaction
 
@@ -41,6 +46,7 @@ class BotCommandParserTest {
     @Test
     fun `returns null for invalid transaction amount`() {
         assertNull(parser.parse("/expense food nope"))
+        assertNull(parser.parse("/e food nope"))
         assertNull(parser.parse("/expense food -1"))
     }
 }

@@ -8,4 +8,6 @@ data class TelegramUpdate(
     @JsonProperty("update_id")
     val updateId: Long,
     val message: TelegramMessage? = null,
+    @JsonProperty("callback_query")
+    val callbackQuery: TelegramCallbackQuery? = null,
 )

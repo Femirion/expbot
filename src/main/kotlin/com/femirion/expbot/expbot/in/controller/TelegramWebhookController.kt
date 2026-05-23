@@ -21,6 +21,14 @@ class TelegramWebhookController(
         if (update.message != null) {
             log.info { "Received telegram update: updateId=${update.updateId}" }
             telegramUpdateHandler.handle(messageMapper.toMessage(update.message))
+        } else if (update.callbackQuery != null) {
+            log.info { "Received telegram callback query: updateId=${update.updateId}" }
+            telegramUpdateHandler.handleCallbackQuery(
+                callbackQueryId = update.callbackQuery.id,
+                userId = update.callbackQuery.from.id,
+                chatId = update.callbackQuery.message?.chat?.id,
+                data = update.callbackQuery.data,
+            )
         } else {
             log.warning { "Skipping update without message: updateId=${update.updateId}" }
         }

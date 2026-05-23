@@ -5,11 +5,14 @@ import com.femirion.expbot.expbot.domain.entity.CategoryType
 import com.femirion.expbot.expbot.domain.entity.Message
 import com.femirion.expbot.expbot.domain.entity.MoneyTransaction
 import com.femirion.expbot.expbot.out.telegram.TelegramBotClient
+import com.femirion.expbot.expbot.out.telegram.TelegramButtonCategory
 import com.femirion.expbot.expbot.service.CategoryService
 import org.springframework.stereotype.Service
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Logger
 
 @Service
@@ -19,11 +22,27 @@ class MessageHandler(
     private val transactionService: MoneyTransactionService,
     private val telegramBotClient: TelegramBotClient,
 ) {
+    private val pendingExpenses = ConcurrentHashMap<PendingExpenseKey, String>()
 
     fun handle(update: Message) {
+        val pendingCategoryCode = pendingExpenses[PendingExpenseKey(update.chatId, update.userId)]
+        if (pendingCategoryCode != null && !update.text.orEmpty().trim().startsWith("/")) {
+            val response = runCatching { createPendingExpense(update, pendingCategoryCode) }
+                .getOrElse { error ->
+                    log.warning { "Failed to handle pending expense message ${update.messageId}: ${error.message}" }
+                    "Could not save it: ${error.message ?: "unknown error"}"
+                }
+            telegramBotClient.sendMessage(update.chatId, response)
+            return
+        }
+
         val command = commandParser.parse(update.text)
         if (command == null) {
             telegramBotClient.sendMessage(update.chatId, helpText())
+            return
+        }
+        if (command == BotCommand.StartExpense) {
+            startExpense(update)
             return
         }
 
@@ -32,16 +51,86 @@ class MessageHandler(
                 log.warning { "Failed to handle message ${update.messageId}: ${error.message}" }
                 "Could not save it: ${error.message ?: "unknown error"}"
             }
-        telegramBotClient.sendMessage(update.chatId, response)
+        if (response.isNotBlank()) {
+            telegramBotClient.sendMessage(update.chatId, response)
+        }
+    }
+
+    fun handleCallbackQuery(callbackQueryId: String, userId: Long, chatId: Long?, data: String?) {
+        telegramBotClient.answerCallbackQuery(callbackQueryId)
+        if (chatId == null) {
+            return
+        }
+
+        val categoryCode = data
+            ?.takeIf { it.startsWith(EXPENSE_CALLBACK_PREFIX) }
+            ?.removePrefix(EXPENSE_CALLBACK_PREFIX)
+            ?.trim()
+            ?.uppercase()
+
+        if (categoryCode == null) {
+            telegramBotClient.sendMessage(chatId, helpText())
+            return
+        }
+
+        val category = categoryService.getCategoryByCode(categoryCode)
+        if (category == null || !category.isActive || category.type != CategoryType.EXPENSE) {
+            telegramBotClient.sendMessage(chatId, "Expense category $categoryCode is not available")
+            return
+        }
+
+        pendingExpenses[PendingExpenseKey(chatId, userId)] = category.code
+        telegramBotClient.sendMessage(chatId, "Send amount and description, for example: 12.50 groceries")
     }
 
     private fun handleCommand(message: Message, command: BotCommand): String {
         return when (command) {
             BotCommand.Help -> helpText()
             BotCommand.ListCategories -> categoriesText()
+            BotCommand.StartExpense -> {
+                startExpense(message)
+                ""
+            }
             is BotCommand.CreateCategory -> createCategory(command)
             is BotCommand.CreateTransaction -> createTransaction(message, command)
         }
+    }
+
+    private fun startExpense(message: Message) {
+        val categories = categoryService.getAll()
+            .filter { it.isActive && it.type == CategoryType.EXPENSE }
+            .sortedBy { it.code }
+        if (categories.isEmpty()) {
+            telegramBotClient.sendMessage(message.chatId, "No expense categories yet. Add one with /category expense food Food")
+            return
+        }
+
+        telegramBotClient.sendMessageWithCategoryButtons(
+            chatId = message.chatId,
+            text = "Choose expense category",
+            categories = categories.map { TelegramButtonCategory(code = it.code, name = it.name) },
+        )
+    }
+
+    private fun createPendingExpense(message: Message, categoryCode: String): String {
+        val parts = message.text.orEmpty().trim().split(Regex("\\s+"), limit = 2)
+        val amount = parts.firstOrNull()
+            ?.replace(',', '.')
+            ?.toBigDecimalOrNull()
+            ?: return "Send amount and description, for example: 12.50 groceries"
+        if (amount <= BigDecimal.ZERO) {
+            return "Amount must be greater than zero"
+        }
+
+        val command = BotCommand.CreateTransaction(
+            categoryCode = categoryCode,
+            amount = amount,
+            note = parts.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() },
+            expectedType = CategoryType.EXPENSE,
+        )
+        val response = createTransaction(message, command)
+        pendingExpenses.remove(PendingExpenseKey(message.chatId, message.userId))
+        return response
     }
 
     private fun createCategory(command: BotCommand.CreateCategory): String {
@@ -97,6 +186,7 @@ class MessageHandler(
             /categories
             /category expense food Food
             /category income salary Salary
+            /e
             /expense food 12.50 groceries
             /income salary 1000 May salary
         """.trimIndent()
@@ -104,5 +194,11 @@ class MessageHandler(
 
     companion object {
         val log: Logger = Logger.getLogger(MessageHandler::class.java.name)
+        private const val EXPENSE_CALLBACK_PREFIX = "expense:"
     }
 }
+
+private data class PendingExpenseKey(
+    val chatId: Long,
+    val userId: Long,
+)

@@ -6,6 +6,7 @@ import java.math.BigDecimal
 sealed interface BotCommand {
     data object Help : BotCommand
     data object ListCategories : BotCommand
+    data object StartExpense : BotCommand
 
     data class CreateCategory(
         val type: CategoryType,

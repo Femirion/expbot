@@ -18,7 +18,9 @@ class BotCommandParser {
             "/start", "/help" -> BotCommand.Help
             "/categories", "/cats" -> BotCommand.ListCategories
             "/category", "/cat" -> parseCategory(parts)
-            "/expense", "/exp", "/e" -> parseTransaction(parts, CategoryType.EXPENSE)
+            "/expense", "/exp", "/e" -> {
+                if (parts.size == 1) BotCommand.StartExpense else parseTransaction(parts, CategoryType.EXPENSE)
+            }
             "/income", "/inc", "/i" -> parseTransaction(parts, CategoryType.INCOME)
             else -> null
         }
