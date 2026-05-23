@@ -18,6 +18,7 @@ spring:
 expbot:
   telegram:
     bot-token: ${TELEGRAM_BOT_TOKEN:}
+    allowed-user-ids: ${ALLOWED_TELEGRAM_USER_IDS:}
   google-sheets:
     enabled: ${GOOGLE_SHEETS_ENABLED:false}
     spreadsheet-id: ${GOOGLE_SHEETS_SPREADSHEET_ID:}

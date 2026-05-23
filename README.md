@@ -39,6 +39,7 @@ The app reads configuration from environment variables. Local defaults are provi
 | `JDBC_DATABASE_USERNAME` | No locally, yes on Railway | PostgreSQL username. Local default is `expbot`. |
 | `JDBC_DATABASE_PASSWORD` | No locally, yes on Railway | PostgreSQL password. Local default is `expbot`. |
 | `TELEGRAM_BOT_TOKEN` | Yes for Telegram replies | Bot token from BotFather. |
+| `ALLOWED_TELEGRAM_USER_IDS` | Yes | Comma-separated Telegram user ids allowed to use the bot, for example `1234,2345`. |
 | `GOOGLE_SHEETS_ENABLED` | No | Set to `true` to append transactions to Google Sheets. Default is `false`. |
 | `GOOGLE_SHEETS_SPREADSHEET_ID` | If Sheets enabled | Spreadsheet id from the Google Sheets URL. |
 | `GOOGLE_SHEETS_RANGE` | No | Append range. Default is `Transactions!A:E`. |
@@ -138,6 +139,7 @@ JDBC_DATABASE_URL=jdbc:postgresql://<host>:<port>/<database>
 JDBC_DATABASE_USERNAME=<username>
 JDBC_DATABASE_PASSWORD=<password>
 TELEGRAM_BOT_TOKEN=<telegram-bot-token>
+ALLOWED_TELEGRAM_USER_IDS=<telegram-user-id-1>,<telegram-user-id-2>
 GOOGLE_SHEETS_ENABLED=false
 ```
 
