@@ -5,6 +5,6 @@
     "buildCommand": "./gradlew clean bootJar"
   },
   "deploy": {
-    "startCommand": "java -jar build/libs/*.jar"
+    "startCommand": "java -XX:MaxRAMPercentage=60 -XX:InitialRAMPercentage=20 -XX:MaxMetaspaceSize=160m -XX:+ExitOnOutOfMemoryError -jar build/libs/*.jar"
   }
 }

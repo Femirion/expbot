@@ -40,6 +40,7 @@ The app reads configuration from environment variables. Local defaults are provi
 | `JDBC_DATABASE_PASSWORD` | No locally, yes on Railway | PostgreSQL password. Local default is `expbot`. |
 | `TELEGRAM_BOT_TOKEN` | Yes for Telegram replies | Bot token from BotFather. |
 | `ALLOWED_TELEGRAM_USER_IDS` | Yes | Comma-separated Telegram user ids allowed to use the bot, for example `1234,2345`. |
+| `JAVA_TOOL_OPTIONS` | No | Optional JVM limits for small instances. Recommended for 1 GB RAM: `-XX:MaxRAMPercentage=60 -XX:InitialRAMPercentage=20 -XX:MaxMetaspaceSize=160m -XX:+ExitOnOutOfMemoryError`. |
 | `GOOGLE_SHEETS_ENABLED` | No | Set to `true` to append transactions to Google Sheets. Default is `false`. |
 | `GOOGLE_SHEETS_SPREADSHEET_ID` | If Sheets enabled | Spreadsheet id from the Google Sheets URL. |
 | `GOOGLE_SHEETS_RANGE` | No | Append range. Default is `Transactions!A:E`. |
