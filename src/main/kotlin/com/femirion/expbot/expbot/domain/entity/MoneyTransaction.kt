@@ -8,7 +8,7 @@ data class MoneyTransaction(
     val telegramMessageId: Long,
     val telegramUserId: Long,
     val chatId: Long,
-    val category: Category,
+    val category: Category?,
     val type: CategoryType,
     val amount: BigDecimal,
     val note: String? = null,

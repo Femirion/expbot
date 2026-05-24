@@ -32,8 +32,8 @@ class MoneyTransactionEntity(
     val chatId: Long,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
-    val category: CategoryEntity,
+    @JoinColumn(name = "category_id")
+    val category: CategoryEntity?,
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 32)

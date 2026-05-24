@@ -2,6 +2,7 @@ package com.femirion.expbot.expbot.domain.service
 
 import com.femirion.expbot.expbot.domain.entity.Category
 import com.femirion.expbot.expbot.domain.entity.CategoryExpenseSummary
+import com.femirion.expbot.expbot.domain.entity.CategoryType
 import com.femirion.expbot.expbot.domain.entity.MoneyTransaction
 import com.femirion.expbot.expbot.`in`.provider.MoneyTransactionProvider
 import org.springframework.stereotype.Service
@@ -23,6 +24,29 @@ class MoneyTransactionService(
         val saved = transactionProvider.save(transaction)
         transactionReporter.report(saved)
         return saved
+    }
+
+    @Transactional
+    fun createExchangeWithdrawal(
+        telegramMessageId: Long,
+        telegramUserId: Long,
+        chatId: Long,
+        amount: BigDecimal,
+        note: String?,
+        occurredAt: OffsetDateTime,
+    ): MoneyTransaction {
+        return create(
+            MoneyTransaction(
+                telegramMessageId = telegramMessageId,
+                telegramUserId = telegramUserId,
+                chatId = chatId,
+                category = null,
+                type = CategoryType.EXCHANGE,
+                amount = amount,
+                note = note,
+                occurredAt = occurredAt,
+            )
+        )
     }
 
     @Transactional(readOnly = true)

@@ -27,8 +27,11 @@ class MoneyTransactionProvider(
     }
 
     fun save(transaction: MoneyTransaction): MoneyTransaction {
-        val categoryId = requireNotNull(transaction.category.id) { "Category id is required" }
-        val categoryEntity = categoryRepository.getReferenceById(categoryId)
+        val categoryEntity = transaction.category
+            ?.let { category ->
+                val categoryId = requireNotNull(category.id) { "Category id is required" }
+                categoryRepository.getReferenceById(categoryId)
+            }
         val savedEntity = transactionRepository.save(
             MoneyTransactionEntity(
                 id = transaction.id,

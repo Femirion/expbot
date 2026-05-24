@@ -21,6 +21,7 @@ class BotCommandParser {
             "/month", "/m" -> BotCommand.MonthExpenses
             "/balance", "/b" -> BotCommand.Balance
             "/corr" -> parseBalanceCorrection(parts)
+            "/ex" -> parseExchangeWithdrawal(parts)
             "/category", "/cat", "/c" -> parseCategory(parts)
             "/expense", "/exp", "/e" -> {
                 if (parts.size == 1) BotCommand.StartExpense else parseTransaction(parts, CategoryType.EXPENSE)
@@ -54,6 +55,20 @@ class BotCommandParser {
         }
         val targetBalance = parts[1].replace(',', '.').toBigDecimalOrNull() ?: return null
         return BotCommand.CorrectBalance(targetBalance)
+    }
+
+    private fun parseExchangeWithdrawal(parts: List<String>): BotCommand.CreateExchangeWithdrawal? {
+        if (parts.size < 2) {
+            return null
+        }
+        val amount = parts[1].replace(',', '.').toBigDecimalOrNull() ?: return null
+        if (amount <= BigDecimal.ZERO) {
+            return null
+        }
+        return BotCommand.CreateExchangeWithdrawal(
+            amount = amount,
+            note = parts.getOrNull(2)?.trim()?.takeIf { it.isNotBlank() },
+        )
     }
 
     private fun parseTransaction(parts: List<String>, type: CategoryType): BotCommand.CreateTransaction? {

@@ -47,6 +47,13 @@ class BotCommandParserTest {
     }
 
     @Test
+    fun `parses exchange withdrawal command`() {
+        val command = parser.parse("/ex 20000") as BotCommand.CreateExchangeWithdrawal
+
+        assertEquals(0, BigDecimal("20000").compareTo(command.amount))
+    }
+
+    @Test
     fun `parses income command with comma decimal separator`() {
         val command = parser.parse("/i salary 1000,25 May salary") as BotCommand.CreateTransaction
 
@@ -71,5 +78,7 @@ class BotCommandParserTest {
         assertNull(parser.parse("/e food nope"))
         assertNull(parser.parse("/expense food -1"))
         assertNull(parser.parse("/corr nope"))
+        assertNull(parser.parse("/ex nope"))
+        assertNull(parser.parse("/ex -1"))
     }
 }

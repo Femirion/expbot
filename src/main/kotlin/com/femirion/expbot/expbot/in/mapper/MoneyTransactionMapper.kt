@@ -15,7 +15,7 @@ class MoneyTransactionMapper(
             telegramMessageId = entity.telegramMessageId,
             telegramUserId = entity.telegramUserId,
             chatId = entity.chatId,
-            category = categoryMapper.toCategory(entity.category),
+            category = entity.category?.let { categoryMapper.toCategory(it) },
             type = entity.type,
             amount = entity.amount,
             note = entity.note,

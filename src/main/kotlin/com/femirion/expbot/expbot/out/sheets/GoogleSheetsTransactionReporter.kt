@@ -129,7 +129,7 @@ internal fun MoneyTransaction.toSheetRow(): List<String> {
     return listOf(
         belgradeOccurredAt.format(SHEET_DATE_FORMATTER),
         belgradeOccurredAt.format(SHEET_TIME_FORMATTER),
-        category.name,
+        category!!.name,
         amount.toPlainString(),
         note.orEmpty(),
     )

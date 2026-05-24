@@ -22,6 +22,7 @@ curl -X POST http://localhost:8080/v1/categories \
 /categories
 /b
 /corr 800
+/ex 20000
 /category expense food Food
 /category income salary Salary
 /expense food 12.50 groceries

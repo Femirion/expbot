@@ -98,6 +98,7 @@ class MessageHandler(
             BotCommand.MonthExpenses -> monthExpensesText(message.chatId)
             BotCommand.Balance -> balanceText(message.chatId)
             is BotCommand.CorrectBalance -> correctBalance(message, command)
+            is BotCommand.CreateExchangeWithdrawal -> createExchangeWithdrawal(message, command)
             BotCommand.StartExpense -> {
                 startCategorySelection(message, CategoryType.EXPENSE)
                 ""
@@ -183,7 +184,19 @@ class MessageHandler(
             )
         )
         val direction = if (transaction.type == CategoryType.EXPENSE) "Expense" else "Income"
-        return "$direction saved: ${transaction.amount.toPlainString()} ${transaction.category.code}"
+        return "$direction saved: ${transaction.amount.toPlainString()} ${transaction.category!!.code}"
+    }
+
+    private fun createExchangeWithdrawal(message: Message, command: BotCommand.CreateExchangeWithdrawal): String {
+        val transaction = transactionService.createExchangeWithdrawal(
+            telegramMessageId = message.messageId,
+            telegramUserId = message.userId,
+            chatId = message.chatId,
+            amount = command.amount,
+            note = command.note,
+            occurredAt = OffsetDateTime.ofInstant(Instant.ofEpochSecond(message.date), ZoneOffset.UTC),
+        )
+        return "Exchange saved: ${transaction.amount.toPlainString()}"
     }
 
     private fun categoriesText(): String {
@@ -249,6 +262,7 @@ class MessageHandler(
             /month
             /b
             /corr 800
+            /ex 20000
             /category expense food Food
             /category income salary Salary
             /e

@@ -38,6 +38,7 @@ interface MoneyTransactionRepository : JpaRepository<MoneyTransactionEntity, Lon
             case
                 when t.type = com.femirion.expbot.expbot.domain.entity.CategoryType.INCOME then t.amount
                 when t.type = com.femirion.expbot.expbot.domain.entity.CategoryType.EXPENSE then -t.amount
+                when t.type = com.femirion.expbot.expbot.domain.entity.CategoryType.EXCHANGE then -t.amount
                 else 0
             end
         ), 0)

@@ -16,6 +16,11 @@ sealed interface BotCommand {
         val targetBalance: BigDecimal,
     ) : BotCommand
 
+    data class CreateExchangeWithdrawal(
+        val amount: BigDecimal,
+        val note: String?,
+    ) : BotCommand
+
     data class CreateCategory(
         val type: CategoryType,
         val code: String,

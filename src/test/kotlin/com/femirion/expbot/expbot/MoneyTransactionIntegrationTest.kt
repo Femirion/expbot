@@ -61,7 +61,7 @@ class MoneyTransactionIntegrationTest @Autowired constructor(
         assertEquals(0, BigDecimal("42.50").compareTo(entity.amount))
         assertEquals("lunch", entity.note)
         assertEquals(CategoryType.EXPENSE, entity.type)
-        assertEquals("TEST_FOOD", entity.category.code)
+        assertEquals("TEST_FOOD", entity.category?.code)
     }
 
     @Test
@@ -145,6 +145,43 @@ class MoneyTransactionIntegrationTest @Autowired constructor(
         assertEquals(0, BigDecimal("800.00").compareTo(correctedBalance))
         assertEquals(0, BigDecimal("800.00").compareTo(transactionService.balance(3203)))
         assertEquals(2, transactionRepository.count())
+    }
+
+    @Test
+    fun `creates exchange withdrawal and decreases balance`() {
+        val incomeCategory = categoryService.createCategory(
+            Category(
+                code = "TEST_EXCHANGE_INC",
+                name = "Test exchange income",
+                type = CategoryType.INCOME,
+            )
+        )
+        transactionService.create(
+            MoneyTransaction(
+                telegramMessageId = 1401,
+                telegramUserId = 2402,
+                chatId = 3403,
+                category = incomeCategory,
+                type = CategoryType.INCOME,
+                amount = BigDecimal("50000.00"),
+                note = null,
+                occurredAt = OffsetDateTime.parse("2026-05-14T10:15:30Z"),
+            )
+        )
+
+        val saved = transactionService.createExchangeWithdrawal(
+            telegramMessageId = 1402,
+            telegramUserId = 2402,
+            chatId = 3403,
+            amount = BigDecimal("20000.00"),
+            note = null,
+            occurredAt = OffsetDateTime.parse("2026-05-14T11:15:30Z"),
+        )
+
+        assertNotNull(saved.id)
+        assertEquals(CategoryType.EXCHANGE, saved.type)
+        assertEquals(null, saved.category)
+        assertEquals(0, BigDecimal("30000.00").compareTo(transactionService.balance(3403)))
     }
 
     @Test
