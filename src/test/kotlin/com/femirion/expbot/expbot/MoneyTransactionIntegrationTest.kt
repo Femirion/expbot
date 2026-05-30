@@ -2,7 +2,9 @@ package com.femirion.expbot.expbot
 
 import com.femirion.expbot.expbot.domain.entity.Category
 import com.femirion.expbot.expbot.domain.entity.CategoryType
+import com.femirion.expbot.expbot.domain.entity.LimitPeriod
 import com.femirion.expbot.expbot.domain.entity.MoneyTransaction
+import com.femirion.expbot.expbot.domain.service.CategoryLimitService
 import com.femirion.expbot.expbot.domain.service.DuplicateBalanceCorrectionException
 import com.femirion.expbot.expbot.domain.service.DuplicateTransactionException
 import com.femirion.expbot.expbot.domain.service.MoneyTransactionService
@@ -29,6 +31,7 @@ import java.time.OffsetDateTime
 @Transactional
 class MoneyTransactionIntegrationTest @Autowired constructor(
     private val categoryService: CategoryService,
+    private val categoryLimitService: CategoryLimitService,
     private val transactionService: MoneyTransactionService,
     private val transactionRepository: MoneyTransactionRepository,
 ) {
@@ -153,6 +156,55 @@ class MoneyTransactionIntegrationTest @Autowired constructor(
         assertEquals(1, summaries.size)
         assertEquals("TEST_SUM_EXP", summaries.single().categoryCode)
         assertEquals(0, BigDecimal("25.50").compareTo(summaries.single().total))
+    }
+
+    @Test
+    fun `detects category limits after expense is saved`() {
+        val expenseCategory = categoryService.createCategory(
+            Category(
+                code = "TEST_LIMIT_EXP",
+                name = "Test limit expense",
+                type = CategoryType.EXPENSE,
+            )
+        )
+
+        categoryLimitService.saveLimit(expenseCategory, BigDecimal("20.00"), LimitPeriod.DAY)
+        categoryLimitService.saveLimit(expenseCategory, BigDecimal("100.00"), LimitPeriod.MONTH)
+
+        transactionService.create(
+            MoneyTransaction(
+                telegramMessageId = 1601,
+                telegramUserId = 2601,
+                chatId = 3601,
+                category = expenseCategory,
+                type = CategoryType.EXPENSE,
+                amount = BigDecimal("10.00"),
+                note = null,
+                occurredAt = OffsetDateTime.parse("2026-05-14T10:15:30Z"),
+            )
+        )
+
+        assertEquals(0, categoryLimitService.exceededLimits(expenseCategory, OffsetDateTime.parse("2026-05-14T10:15:30Z")).size)
+
+        transactionService.create(
+            MoneyTransaction(
+                telegramMessageId = 1602,
+                telegramUserId = 2602,
+                chatId = 3602,
+                category = expenseCategory,
+                type = CategoryType.EXPENSE,
+                amount = BigDecimal("15.50"),
+                note = null,
+                occurredAt = OffsetDateTime.parse("2026-05-14T11:15:30Z"),
+            )
+        )
+
+        val exceededLimits = categoryLimitService.exceededLimits(expenseCategory, OffsetDateTime.parse("2026-05-14T11:15:30Z"))
+
+        assertEquals(1, exceededLimits.size)
+        assertEquals(LimitPeriod.DAY, exceededLimits.single().period)
+        assertEquals(0, BigDecimal("25.50").compareTo(exceededLimits.single().total))
+        assertEquals(0, BigDecimal("20.00").compareTo(exceededLimits.single().amount))
     }
 
     @Test

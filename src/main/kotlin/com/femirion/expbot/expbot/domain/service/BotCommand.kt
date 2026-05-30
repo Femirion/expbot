@@ -8,6 +8,7 @@ sealed interface BotCommand {
     data object ListCategories : BotCommand
     data object StartExpense : BotCommand
     data object StartIncome : BotCommand
+    data object StartLimit : BotCommand
     data object TodayExpenses : BotCommand
     data object MonthExpenses : BotCommand
     data object Balance : BotCommand

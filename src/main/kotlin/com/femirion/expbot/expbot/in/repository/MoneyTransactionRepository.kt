@@ -32,6 +32,22 @@ interface MoneyTransactionRepository : JpaRepository<MoneyTransactionEntity, Lon
 
     @Query(
         """
+        select coalesce(sum(t.amount), 0)
+        from MoneyTransactionEntity t
+        where t.category.id = :categoryId
+          and t.type = com.femirion.expbot.expbot.domain.entity.CategoryType.EXPENSE
+          and t.occurredAt >= :from
+          and t.occurredAt < :to
+        """
+    )
+    fun expenseTotalByCategory(
+        @Param("categoryId") categoryId: Long,
+        @Param("from") from: OffsetDateTime,
+        @Param("to") to: OffsetDateTime,
+    ): BigDecimal
+
+    @Query(
+        """
         select coalesce(sum(
             case
                 when t.type = com.femirion.expbot.expbot.domain.entity.CategoryType.INCOME then t.amount

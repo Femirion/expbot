@@ -37,6 +37,8 @@ class BotCommandParserTest {
         assertEquals(BotCommand.MonthExpenses, parser.parse("/m"))
         assertEquals(BotCommand.Balance, parser.parse("/balance"))
         assertEquals(BotCommand.Balance, parser.parse("/b"))
+        assertEquals(BotCommand.StartLimit, parser.parse("/limit"))
+        assertEquals(BotCommand.StartLimit, parser.parse("/l"))
     }
 
     @Test

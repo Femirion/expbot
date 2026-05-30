@@ -20,6 +20,7 @@ class BotCommandParser {
             "/today", "/t" -> BotCommand.TodayExpenses
             "/month", "/m" -> BotCommand.MonthExpenses
             "/balance", "/b" -> BotCommand.Balance
+            "/limit", "/l" -> BotCommand.StartLimit
             "/corr" -> parseBalanceCorrection(parts)
             "/ex" -> parseExchangeWithdrawal(parts)
             "/category", "/cat", "/c" -> parseCategory(parts)

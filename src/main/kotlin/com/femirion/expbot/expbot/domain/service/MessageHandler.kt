@@ -2,6 +2,7 @@ package com.femirion.expbot.expbot.domain.service
 
 import com.femirion.expbot.expbot.domain.entity.Category
 import com.femirion.expbot.expbot.domain.entity.CategoryType
+import com.femirion.expbot.expbot.domain.entity.LimitPeriod
 import com.femirion.expbot.expbot.domain.entity.Message
 import com.femirion.expbot.expbot.domain.entity.MoneyTransaction
 import com.femirion.expbot.expbot.out.telegram.TelegramBotClient
@@ -21,18 +22,32 @@ import java.util.logging.Logger
 class MessageHandler(
     private val commandParser: BotCommandParser,
     private val categoryService: CategoryService,
+    private val categoryLimitService: CategoryLimitService,
     private val transactionService: MoneyTransactionService,
     private val telegramBotClient: TelegramBotClient,
 ) {
     private val pendingTransactions = ConcurrentHashMap<PendingTransactionKey, PendingTransaction>()
+    private val pendingLimits = ConcurrentHashMap<PendingTransactionKey, PendingLimit>()
 
     fun handle(update: Message) {
-        val pendingTransaction = pendingTransactions[PendingTransactionKey(update.chatId, update.userId)]
+        val pendingKey = PendingTransactionKey(update.chatId, update.userId)
+        val pendingTransaction = pendingTransactions[pendingKey]
         if (pendingTransaction != null && !update.text.orEmpty().trim().startsWith("/")) {
             val response = runCatching { createPendingTransaction(update, pendingTransaction) }
                 .getOrElse { error ->
                     log.warning { "Failed to handle pending transaction message ${update.messageId}: ${error.message}" }
                     "Could not save it: ${error.message ?: "unknown error"}"
+                }
+            telegramBotClient.sendMessage(update.chatId, response)
+            return
+        }
+
+        val pendingLimit = pendingLimits[pendingKey]
+        if (pendingLimit != null && !update.text.orEmpty().trim().startsWith("/")) {
+            val response = runCatching { createPendingLimit(update, pendingLimit) }
+                .getOrElse { error ->
+                    log.warning { "Failed to handle pending limit message ${update.messageId}: ${error.message}" }
+                    "Could not save limit: ${error.message ?: "unknown error"}"
                 }
             telegramBotClient.sendMessage(update.chatId, response)
             return
@@ -51,6 +66,10 @@ class MessageHandler(
             startCategorySelection(update, CategoryType.INCOME)
             return
         }
+        if (command == BotCommand.StartLimit) {
+            startLimitCategorySelection(update)
+            return
+        }
 
         val response = runCatching { handleCommand(update, command) }
             .getOrElse { error ->
@@ -65,6 +84,24 @@ class MessageHandler(
     fun handleCallbackQuery(callbackQueryId: String, userId: Long, chatId: Long?, data: String?) {
         telegramBotClient.answerCallbackQuery(callbackQueryId)
         if (chatId == null) {
+            return
+        }
+
+        val limitCategoryCode = data
+            ?.takeIf { it.startsWith("$LIMIT_CALLBACK_PREFIX:") }
+            ?.substringAfter(":", missingDelimiterValue = "")
+            ?.trim()
+            ?.uppercase()
+            ?.takeIf { it.isNotBlank() }
+        if (limitCategoryCode != null) {
+            val category = categoryService.getCategoryByCode(limitCategoryCode)
+            if (category == null || !category.isActive || category.type != CategoryType.EXPENSE) {
+                telegramBotClient.sendMessage(chatId, "Expense category $limitCategoryCode is not available")
+                return
+            }
+            pendingTransactions.remove(PendingTransactionKey(chatId, userId))
+            pendingLimits[PendingTransactionKey(chatId, userId)] = PendingLimit(category.code)
+            telegramBotClient.sendMessage(chatId, "Send limit amount and period, for example: 1000 D or 30000 M")
             return
         }
 
@@ -87,6 +124,7 @@ class MessageHandler(
         }
 
         pendingTransactions[PendingTransactionKey(chatId, userId)] = PendingTransaction(category.code, categoryType)
+        pendingLimits.remove(PendingTransactionKey(chatId, userId))
         telegramBotClient.sendMessage(chatId, "Send amount and description, for example: 12.50 groceries")
     }
 
@@ -97,6 +135,10 @@ class MessageHandler(
             BotCommand.TodayExpenses -> todayExpensesText()
             BotCommand.MonthExpenses -> monthExpensesText()
             BotCommand.Balance -> balanceText(message.chatId)
+            BotCommand.StartLimit -> {
+                startLimitCategorySelection(message)
+                ""
+            }
             is BotCommand.CorrectBalance -> correctBalance(message, command)
             is BotCommand.CreateExchangeWithdrawal -> createExchangeWithdrawal(message, command)
             BotCommand.StartExpense -> {
@@ -113,6 +155,7 @@ class MessageHandler(
     }
 
     private fun startCategorySelection(message: Message, type: CategoryType) {
+        pendingLimits.remove(PendingTransactionKey(message.chatId, message.userId))
         val categories = categoryService.getAll()
             .filter { it.isActive && it.type == type }
             .sortedBy { it.code }
@@ -125,6 +168,24 @@ class MessageHandler(
             chatId = message.chatId,
             text = "Choose ${type.name.lowercase()} category",
             callbackPrefix = type.callbackPrefix(),
+            categories = categories.map { TelegramButtonCategory(code = it.code, name = it.name) },
+        )
+    }
+
+    private fun startLimitCategorySelection(message: Message) {
+        pendingTransactions.remove(PendingTransactionKey(message.chatId, message.userId))
+        val categories = categoryService.getAll()
+            .filter { it.isActive && it.type == CategoryType.EXPENSE }
+            .sortedBy { it.code }
+        if (categories.isEmpty()) {
+            telegramBotClient.sendMessage(message.chatId, "No expense categories yet. Add one with /category expense code Name")
+            return
+        }
+
+        telegramBotClient.sendMessageWithCategoryButtons(
+            chatId = message.chatId,
+            text = "Choose expense category for limit",
+            callbackPrefix = LIMIT_CALLBACK_PREFIX,
             categories = categories.map { TelegramButtonCategory(code = it.code, name = it.name) },
         )
     }
@@ -161,6 +222,29 @@ class MessageHandler(
         return "Category saved: ${category.code} (${category.type})"
     }
 
+    private fun createPendingLimit(message: Message, pendingLimit: PendingLimit): String {
+        val parts = message.text.orEmpty().trim().split(Regex("\\s+"))
+        if (parts.size != 2) {
+            return "Send limit amount and period, for example: 1000 D or 30000 M"
+        }
+        val amount = parts[0].replace(',', '.').toBigDecimalOrNull()
+            ?: return "Limit amount must be a number"
+        if (amount <= BigDecimal.ZERO) {
+            return "Limit amount must be greater than zero"
+        }
+        val period = parts[1].limitPeriod()
+            ?: return "Limit period must be D for day or M for month"
+        val category = categoryService.getCategoryByCode(pendingLimit.categoryCode)
+            ?: return "Category ${pendingLimit.categoryCode} does not exist"
+        if (!category.isActive || category.type != CategoryType.EXPENSE) {
+            return "Expense category ${category.code} is not available"
+        }
+
+        val limit = categoryLimitService.saveLimit(category, amount, period)
+        pendingLimits.remove(PendingTransactionKey(message.chatId, message.userId))
+        return "${period.label()} limit saved for ${limit.categoryCode}: ${limit.amount.toPlainString()}"
+    }
+
     private fun createTransaction(message: Message, command: BotCommand.CreateTransaction): String {
         val category = categoryService.getCategoryByCode(command.categoryCode)
             ?: return "Category ${command.categoryCode} does not exist. Add it with /category ${command.expectedType.name.lowercase()} ${command.categoryCode} Name"
@@ -184,7 +268,16 @@ class MessageHandler(
             )
         )
         val direction = if (transaction.type == CategoryType.EXPENSE) "Expense" else "Income"
-        return "$direction saved: ${transaction.amount.toPlainString()} ${transaction.category!!.code}"
+        val transactionCategory = transaction.category ?: return "$direction saved: ${transaction.amount.toPlainString()}"
+        val response = "$direction saved: ${transaction.amount.toPlainString()} ${transactionCategory.code}"
+        if (transaction.type != CategoryType.EXPENSE) {
+            return response
+        }
+        val limitMessages = categoryLimitService.exceededLimits(transactionCategory, transaction.occurredAt)
+            .map { limit ->
+                "${limit.period.label()} limit exceeded for ${limit.categoryCode}: ${limit.total.toPlainString()} / ${limit.amount.toPlainString()}"
+            }
+        return (listOf(response) + limitMessages).joinToString("\n")
     }
 
     private fun createExchangeWithdrawal(message: Message, command: BotCommand.CreateExchangeWithdrawal): String {
@@ -262,6 +355,7 @@ class MessageHandler(
             /b
             /corr 800
             /ex 20000
+            /l
             /category expense food Food
             /category income salary Salary
             /e
@@ -286,8 +380,27 @@ private data class PendingTransaction(
     val type: CategoryType,
 )
 
+private data class PendingLimit(
+    val categoryCode: String,
+)
+
 private fun CategoryType.callbackPrefix(): String {
     return name.lowercase()
+}
+
+private fun LimitPeriod.label(): String {
+    return when (this) {
+        LimitPeriod.DAY -> "Day"
+        LimitPeriod.MONTH -> "Month"
+    }
+}
+
+private fun String.limitPeriod(): LimitPeriod? {
+    return when (trim().uppercase()) {
+        "D" -> LimitPeriod.DAY
+        "M" -> LimitPeriod.MONTH
+        else -> null
+    }
 }
 
 private fun CategoryType.label(): String {
@@ -301,3 +414,5 @@ private fun String.callbackCategoryType(): CategoryType? {
         else -> null
     }
 }
+
+private const val LIMIT_CALLBACK_PREFIX = "limit"
