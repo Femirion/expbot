@@ -18,6 +18,7 @@ class BotCommandParser {
             "/start", "/help" -> BotCommand.Help
             "/categories", "/cats" -> BotCommand.ListCategories
             "/today", "/t" -> BotCommand.TodayExpenses
+            "/week", "/w" -> BotCommand.WeekExpenses
             "/month", "/m" -> BotCommand.MonthExpenses
             "/balance", "/b" -> BotCommand.Balance
             "/limit", "/l" -> BotCommand.StartLimit

@@ -10,6 +10,7 @@ sealed interface BotCommand {
     data object StartIncome : BotCommand
     data object StartLimit : BotCommand
     data object TodayExpenses : BotCommand
+    data object WeekExpenses : BotCommand
     data object MonthExpenses : BotCommand
     data object Balance : BotCommand
 

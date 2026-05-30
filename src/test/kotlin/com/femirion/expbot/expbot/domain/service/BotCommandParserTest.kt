@@ -33,6 +33,8 @@ class BotCommandParserTest {
     fun `parses expense summary commands`() {
         assertEquals(BotCommand.TodayExpenses, parser.parse("/today"))
         assertEquals(BotCommand.TodayExpenses, parser.parse("/t"))
+        assertEquals(BotCommand.WeekExpenses, parser.parse("/week"))
+        assertEquals(BotCommand.WeekExpenses, parser.parse("/w"))
         assertEquals(BotCommand.MonthExpenses, parser.parse("/month"))
         assertEquals(BotCommand.MonthExpenses, parser.parse("/m"))
         assertEquals(BotCommand.Balance, parser.parse("/balance"))

@@ -10,11 +10,13 @@ import com.femirion.expbot.expbot.out.telegram.TelegramButtonCategory
 import com.femirion.expbot.expbot.service.CategoryService
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.YearMonth
 import java.time.ZoneOffset
+import java.time.temporal.TemporalAdjusters
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Logger
 
@@ -133,6 +135,7 @@ class MessageHandler(
             BotCommand.Help -> helpText()
             BotCommand.ListCategories -> categoriesText()
             BotCommand.TodayExpenses -> todayExpensesText()
+            BotCommand.WeekExpenses -> weekExpensesText()
             BotCommand.MonthExpenses -> monthExpensesText()
             BotCommand.Balance -> balanceText(message.chatId)
             BotCommand.StartLimit -> {
@@ -309,6 +312,14 @@ class MessageHandler(
         return expensesSummaryText("Today expenses", from, to)
     }
 
+    private fun weekExpensesText(): String {
+        val today = LocalDate.now(ZoneOffset.UTC)
+        val weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val from = weekStart.atStartOfDay().atOffset(ZoneOffset.UTC)
+        val to = weekStart.plusWeeks(1).atStartOfDay().atOffset(ZoneOffset.UTC)
+        return expensesSummaryText("Week expenses", from, to)
+    }
+
     private fun monthExpensesText(): String {
         val month = YearMonth.now(ZoneOffset.UTC)
         val from = month.atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC)
@@ -351,6 +362,7 @@ class MessageHandler(
             Commands:
             /categories
             /today
+            /week
             /month
             /b
             /corr 800
