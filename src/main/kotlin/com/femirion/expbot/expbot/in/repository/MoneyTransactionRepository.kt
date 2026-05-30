@@ -17,8 +17,7 @@ interface MoneyTransactionRepository : JpaRepository<MoneyTransactionEntity, Lon
                t.category.name as categoryName,
                sum(t.amount) as total
         from MoneyTransactionEntity t
-        where t.chatId = :chatId
-          and t.type = :type
+        where t.type = :type
           and t.occurredAt >= :from
           and t.occurredAt < :to
         group by t.category.code, t.category.name
@@ -26,7 +25,6 @@ interface MoneyTransactionRepository : JpaRepository<MoneyTransactionEntity, Lon
         """
     )
     fun sumByCategory(
-        @Param("chatId") chatId: Long,
         @Param("type") type: CategoryType,
         @Param("from") from: OffsetDateTime,
         @Param("to") to: OffsetDateTime,

@@ -94,8 +94,8 @@ class MessageHandler(
         return when (command) {
             BotCommand.Help -> helpText()
             BotCommand.ListCategories -> categoriesText()
-            BotCommand.TodayExpenses -> todayExpensesText(message.chatId)
-            BotCommand.MonthExpenses -> monthExpensesText(message.chatId)
+            BotCommand.TodayExpenses -> todayExpensesText()
+            BotCommand.MonthExpenses -> monthExpensesText()
             BotCommand.Balance -> balanceText(message.chatId)
             is BotCommand.CorrectBalance -> correctBalance(message, command)
             is BotCommand.CreateExchangeWithdrawal -> createExchangeWithdrawal(message, command)
@@ -209,27 +209,26 @@ class MessageHandler(
         return categories.joinToString(separator = "\n") { "${it.code} - ${it.name} (${it.type.name.lowercase()})" }
     }
 
-    private fun todayExpensesText(chatId: Long): String {
+    private fun todayExpensesText(): String {
         val today = LocalDate.now(ZoneOffset.UTC)
         val from = today.atStartOfDay().atOffset(ZoneOffset.UTC)
         val to = today.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC)
-        return expensesSummaryText("Today expenses", chatId, from, to)
+        return expensesSummaryText("Today expenses", from, to)
     }
 
-    private fun monthExpensesText(chatId: Long): String {
+    private fun monthExpensesText(): String {
         val month = YearMonth.now(ZoneOffset.UTC)
         val from = month.atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC)
         val to = month.plusMonths(1).atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC)
-        return expensesSummaryText("Month expenses", chatId, from, to)
+        return expensesSummaryText("Month expenses", from, to)
     }
 
     private fun expensesSummaryText(
         title: String,
-        chatId: Long,
         from: OffsetDateTime,
         to: OffsetDateTime,
     ): String {
-        val summaries = transactionService.sumExpensesByCategory(chatId, from, to)
+        val summaries = transactionService.sumExpensesByCategory(from, to)
         if (summaries.isEmpty()) {
             return "$title:\nNo expenses"
         }

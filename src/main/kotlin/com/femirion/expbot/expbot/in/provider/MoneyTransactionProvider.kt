@@ -49,8 +49,8 @@ class MoneyTransactionProvider(
         return transactionMapper.toTransaction(savedEntity)
     }
 
-    fun sumExpensesByCategory(chatId: Long, from: OffsetDateTime, to: OffsetDateTime): List<CategoryExpenseSummary> {
-        return transactionRepository.sumByCategory(chatId, CategoryType.EXPENSE, from, to)
+    fun sumExpensesByCategory(from: OffsetDateTime, to: OffsetDateTime): List<CategoryExpenseSummary> {
+        return transactionRepository.sumByCategory(CategoryType.EXPENSE, from, to)
             .map {
                 CategoryExpenseSummary(
                     categoryCode = it.categoryCode,

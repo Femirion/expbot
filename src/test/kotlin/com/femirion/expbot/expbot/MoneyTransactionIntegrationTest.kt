@@ -92,6 +92,70 @@ class MoneyTransactionIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun `sums expenses across chats and users`() {
+        val expenseCategory = categoryService.createCategory(
+            Category(
+                code = "TEST_SUM_EXP",
+                name = "Test sum expense",
+                type = CategoryType.EXPENSE,
+            )
+        )
+        val incomeCategory = categoryService.createCategory(
+            Category(
+                code = "TEST_SUM_INC",
+                name = "Test sum income",
+                type = CategoryType.INCOME,
+            )
+        )
+
+        transactionService.create(
+            MoneyTransaction(
+                telegramMessageId = 1501,
+                telegramUserId = 2501,
+                chatId = 3501,
+                category = expenseCategory,
+                type = CategoryType.EXPENSE,
+                amount = BigDecimal("10.00"),
+                note = null,
+                occurredAt = OffsetDateTime.parse("2026-05-14T10:15:30Z"),
+            )
+        )
+        transactionService.create(
+            MoneyTransaction(
+                telegramMessageId = 1502,
+                telegramUserId = 2502,
+                chatId = 3502,
+                category = expenseCategory,
+                type = CategoryType.EXPENSE,
+                amount = BigDecimal("15.50"),
+                note = null,
+                occurredAt = OffsetDateTime.parse("2026-05-14T11:15:30Z"),
+            )
+        )
+        transactionService.create(
+            MoneyTransaction(
+                telegramMessageId = 1503,
+                telegramUserId = 2503,
+                chatId = 3503,
+                category = incomeCategory,
+                type = CategoryType.INCOME,
+                amount = BigDecimal("100.00"),
+                note = null,
+                occurredAt = OffsetDateTime.parse("2026-05-14T12:15:30Z"),
+            )
+        )
+
+        val summaries = transactionService.sumExpensesByCategory(
+            from = OffsetDateTime.parse("2026-05-14T00:00:00Z"),
+            to = OffsetDateTime.parse("2026-05-15T00:00:00Z"),
+        )
+
+        assertEquals(1, summaries.size)
+        assertEquals("TEST_SUM_EXP", summaries.single().categoryCode)
+        assertEquals(0, BigDecimal("25.50").compareTo(summaries.single().total))
+    }
+
+    @Test
     fun `corrects balance without creating money transaction`() {
         val expenseCategory = categoryService.createCategory(
             Category(

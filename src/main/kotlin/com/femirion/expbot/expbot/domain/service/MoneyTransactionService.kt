@@ -50,8 +50,8 @@ class MoneyTransactionService(
     }
 
     @Transactional(readOnly = true)
-    fun sumExpensesByCategory(chatId: Long, from: OffsetDateTime, to: OffsetDateTime): List<CategoryExpenseSummary> {
-        return transactionProvider.sumExpensesByCategory(chatId, from, to)
+    fun sumExpensesByCategory(from: OffsetDateTime, to: OffsetDateTime): List<CategoryExpenseSummary> {
+        return transactionProvider.sumExpensesByCategory(from, to)
     }
 
     @Transactional(readOnly = true)
